@@ -1,0 +1,11 @@
+Authlogic Activation Tutorial
+
+This tutorial will show you how to set up email based user activation for Authlogic. The most basic version of this will be bare activation, but I will also show you how to allow a user to set their password/openid identifier upon activation -- which means all you need to get someone to sign up is a login and email! Nifty.
+
+Bare activation.
+
+Let's add an 'active' field to the user model.
+
+script/generate migration AddActiveToUsers active:boolean
+
+And let's make sure to add a default of false to the column.

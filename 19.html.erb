@@ -1,0 +1,20 @@
+<!-- in app/views/activations/new.html.erb -->
+
+<h1>Activate your account</h1>
+
+<% form_for @user, :url => activate_path(@user.id), :html => { :method => :post } do |form| %>
+	<%= form.error_messages %>
+	<%= render :partial => "form", :locals => { :form => form }%>
+	<%= form.submit "Activate" %>
+<% end %>
+
+<!-- in app/views/activations/_form.html.erb -->
+
+<%= form.label :password, "Set your password" %><br />
+<%= form.password_field :password %><br />
+<br />
+<%= form.label :password_confirmation %><br />
+<%= form.password_field :password_confirmation %><br />
+<br />
+<%= form.label :openid_identifier, "Or use OpenID instead of your email / password" %><br />
+<%= form.text_field :openid_identifier %><br />

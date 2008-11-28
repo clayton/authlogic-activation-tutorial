@@ -1,0 +1,3 @@
+I'm raising exceptions here to make sure that someone who is already active cannot re-activate their account and to deal with an invalid perishable token. I'll leave it up to you how you want to handle those errors -- you should probably provide some sort of "My Token is Expired!" action that will reset the token and resend the activation email.
+
+Going down the list, let's define the missing actions. First:

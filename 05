@@ -1,0 +1,5 @@
+Now, if we try to log in, we'll get "Your account is not active." Let's create a controller that will handle our activations:
+
+script/generate controller activations new create
+
+Let's define those actions:

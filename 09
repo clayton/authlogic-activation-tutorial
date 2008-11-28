@@ -1,0 +1,1 @@
+Now let's make sure our user gets an e-mail with his activation code when he signs up. How are we getting our activation code? The same way we get our password reset code -- through our perishable token:

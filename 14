@@ -1,0 +1,1 @@
+As the comment says, we don't need the Authlogic auto-login to take place so we save without maintaining the session. And we shouldn't forget to confirm the activation by email. Now let's define the activation view.
