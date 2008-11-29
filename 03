@@ -1,4 +1,4 @@
-Cool. Let's run the migration
+Let's run the migration
 
 rake db:migrate
 
