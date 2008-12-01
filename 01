@@ -1,5 +1,7 @@
 Authlogic Activation Tutorial
 
+A repository of the final product lives here: http://github.com/matthooks/authlogic_example/tree/master
+
 This tutorial will show you how to set up email based user activation for Authlogic v1.3.6 using the authlogic_example repository. I will also show you how to allow the user to set their password/openid upon activation -- which means a user only needs to enter their login and email to sign up. Simple signup forms! Nifty.
 
 Let's begin by adding an 'active' field with a default of false to the user model.
