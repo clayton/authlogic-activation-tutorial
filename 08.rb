@@ -1,4 +1,4 @@
-# in user.rb
+# added to user.rb
 def activate!
   self.active = true
   save

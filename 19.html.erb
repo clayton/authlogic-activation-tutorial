@@ -1,5 +1,4 @@
-<!-- in app/views/activations/new.html.erb -->
-
+<!-- modified app/views/activations/new.html.erb -->
 <h1>Activate your account</h1>
 
 <% form_for @user, :url => activate_path(@user.id), :html => { :method => :post } do |form| %>
@@ -8,8 +7,7 @@
 	<%= form.submit "Activate" %>
 <% end %>
 
-<!-- in app/views/activations/_form.html.erb -->
-
+<!-- new file app/views/activations/_form.html.erb -->
 <%= form.label :password, "Set your password" %><br />
 <%= form.password_field :password %><br />
 <br />

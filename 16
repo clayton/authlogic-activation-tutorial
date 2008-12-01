@@ -6,8 +6,8 @@ Looks like our user got activated!
 
 But there's a slight problem. Since we didn't update the user's password, we didn't get a magical Authlogic auto-login! How rude.
 
-At this point it's perfectly fine to let the user log themselves in. You could also simplify the activation down to one action so the user doesn't have to click a button to activate. But, I like auto-logins. I also like short forms. So let's kill two birds with one stone.
+At this point it's perfectly fine to let the user log themselves in. And you can certainly simplify the activation down to one action so the user doesn't have to click another button. But, I like Authlogic's session maintenance. I also like short signup forms. So let's kill two birds with one stone.
 
 Let's set up the user creation form to only ask for a user's login/email. Then, let's ask the user to set their password/openid upon activation, which will log them in automatically.
 
-First, let's change our acts_as_authentic call to only check for password presence on update if the user has no credentials set.
+First, let's change our acts_as_authentic call to only check for password length on update if the user has no credentials set.

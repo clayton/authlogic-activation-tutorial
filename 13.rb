@@ -1,3 +1,4 @@
+# modified app/controllers/users_controller.rb
 def create
   @user = User.new(params[:user])
   

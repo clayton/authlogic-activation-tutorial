@@ -1,3 +1,4 @@
+# new file app/controllers/activations_controller.rb
 class ActivationsController < ApplicationController
   before_filter :require_no_user, :only => [:new, :create]
   

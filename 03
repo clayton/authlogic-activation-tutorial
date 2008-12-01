@@ -1,5 +1,7 @@
-Let's run the migration
+Don't forget to run the migraiton.
 
 rake db:migrate
 
-Authlogic automatically runs the following methods, if present, upon user action: active?, approved?, and confirmed?. Let's create an active? method so we can hook into this magical goodness:
+Authlogic automatically executes the following methods, if present, upon user action: active?, approved?, and confirmed?. Let's create an "active?" method so we can hook into this magical goodness.
+
+And we should make sure that we protect the active attribute from mass-assignments by calling attr_accessible.
