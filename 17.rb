@@ -1,7 +1,14 @@
 # modified user.rb
-acts_as_authentic :login_field_validation_options => { :if => :openid_identifier_blank? },
-                  :password_field_validation_options => { :if => :openid_identifier_blank? },
-                  :password_field_validates_length_of_options => { :on => :update, :if => :has_no_credentials? }
+# For authlogic 2.0+
+acts_as_authentic do |c|
+  c.validates_length_of_password_field_options = {:on => :update, :minimum => 4, :if => :has_no_credentials?}
+  c.validates_length_of_password_confirmation_field_options = {:on => :update, :minimum => 4, :if => :has_no_credentials?}
+end
+
+# Pre-authlogic 2.0
+# acts_as_authentic :login_field_validation_options => { :if => :openid_identifier_blank? },
+#                   :password_field_validation_options => { :if => :openid_identifier_blank? },
+#                   :password_field_validates_length_of_options => { :on => :update, :if => :has_no_credentials? }
 
 # ...
 # we need to make sure that either a password or openid gets set
