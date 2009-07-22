@@ -1,0 +1,290 @@
+h2. Introduction
+
+This is an easier to read version of Matt Hooks' "Authlogic Activation Tutorial":http://github.com/matthooks/authlogic-activation-tutorial/tree/master. The tutorial is divided into a number of steps and walks through the process of implementing user activation functionality into your pre-existing Rails app using "Authlogic":http://github.com/binarylogic/authlogic/tree/master. If you are just starting out with Authlogic, be sure to checkout the "Authlogic Example Tutorial":http://github.com/binarylogic/authlogic_example/tree/master.
+
+h2. Step 1
+
+Let's begin by adding an 'active' field with a default of false to the user model.
+
+@script/generate migration AddActiveToUsers active:boolean@
+
+<pre>
+  # new migration XXX_add_active_to_users.rb
+  class AddActiveToUsers < ActiveRecord::Migration
+    def self.up
+      add_column :users, :active, :boolean, :default => false, :null => false
+    end
+
+    def self.down
+      remove_column :users, :active
+    end
+  end
+</pre>
+
+h2. Step 2
+
+Don't forget to run the migraiton.
+
+@rake db:migrate@
+
+Authlogic automatically executes the following methods, if present, upon user action: active?, approved?, and confirmed?. Let's create an "active?" method so we can hook into this magical goodness. And we should make sure that we protect the active attribute from mass-assignments by calling attr_accessible.
+
+<pre>
+  # added to user.rb
+  attr_accessible :login, :email, :password, :password_confirmation, :openid_identifier
+
+  def active?
+    active
+  end
+</pre>
+
+h2. Step 3
+
+Now try to log in. You should receive the error, "Your account is not active." So far so good. Let's make a controller to handle our activations:
+
+@script/generate controller activations new create@
+
+<pre>
+  # new file app/controllers/activations_controller.rb
+  class ActivationsController < ApplicationController
+    before_filter :require_no_user, :only => [:new, :create]
+
+    def new
+      @user = User.find_using_perishable_token(params[:activation_code], 1.week) || (raise Exception)
+      raise Exception if @user.active?
+    end
+
+    def create
+      @user = User.find(params[:id])
+
+      raise Exception if @user.active?
+
+      if @user.activate!
+        @user.deliver_activation_confirmation!
+        redirect_to account_url
+      else
+        render :action => :new
+      end
+    end
+
+  end
+</pre>
+
+h2. Step 4
+
+I raise exceptions in these actions to make sure that someone who is already active cannot re-activate their account and to deal with an invalid perishable token. I'll leave it up to you how you want to handle these errors -- you should probably provide some sort of "My Token is Expired!" action that will reset the token and resend the activation email if the user does not get around to activating right away.
+
+Going down the list, let's define the missing actions. First:
+
+<pre>
+  # added to user.rb
+  def activate!
+    self.active = true
+    save
+  end
+</pre>
+
+h2. Step 5
+
+Next, let's make sure our user gets an e-mail with his activation code when he signs up. How are we getting our activation code? The same way we get our password reset code -- through our perishable token:
+
+<pre>
+  # added to app/models/user.rb
+  def deliver_activation_instructions!
+    reset_perishable_token!
+    Notifier.deliver_activation_instructions(self)
+  end
+
+  def deliver_activation_confirmation!
+    reset_perishable_token!
+    Notifier.deliver_activation_confirmation(self)
+  end
+
+  # added to app/models/notifier.rb
+  def activation_instructions(user)
+    subject       "Activation Instructions"
+    from          "Binary Logic Notifier <noreply@binarylogic.com>"
+    recipients    user.email
+    sent_on       Time.now
+    body          :account_activation_url => register_url(user.perishable_token)
+  end
+
+  def activation_confirmation(user)
+    subject       "Activation Complete"
+    from          "Binary Logic Notifier <noreply@binarylogic.com>"
+    recipients    user.email
+    sent_on       Time.now
+    body          :root_url => root_url
+  end
+
+  # added to config/routes.rb
+  map.register '/register/:activation_code', :controller => 'activations', :action => 'new'
+  map.activate '/activate/:id', :controller => 'activations', :action => 'create'
+  
+  <!-- new file app/views/notifier/activation_instructions.erb --> 
+  Thank you for creating an account! Click the url below to activate your account!
+
+  <%= @account_activation_url %>
+
+  If the above URL does not work try copying and pasting it into your browser. If you continue to have problem, please feel free to contact us.
+
+  <!-- new file app/views/notifier/activation_confirmation.erb -->
+  Your account has been activated.
+
+  <%= @root_url %>
+
+  If the above URL does not work try copying and pasting it into your browser. If you continue to have problem, please feel free to contact us.
+  
+</pre>
+
+h2. Step 6
+
+Now let's modify the user create action:
+
+<pre>
+  # modified app/controllers/users_controller.rb
+  def create
+    @user = User.new(params[:user])
+
+    # Saving without session maintenance to skip
+    # auto-login which can't happen here because
+    # the User has not yet been activated
+    if @user.save_without_session_maintenance
+      @user.deliver_activation_instructions!
+      flash[:notice] = "Your account has been created. Please check your e-mail for your account activation instructions!"
+      redirect_to root_url
+    else
+      render :action => :new
+    end
+  end
+</pre>
+
+h2. Step 7
+
+As the comment says, we don't need the Authlogic auto-login to take place so we save without maintaining the session. Now let's define the 'register' view.
+
+<pre>
+  <!-- new file app/views/activations/new.html.erb -->
+
+  <h1>Activate your account</h1>
+
+  <% form_for @user, :url => activate_path(@user.id), :html => { :method => :post } do |f| %>
+  	<%= f.error_messages %>
+  	<%= f.submit "Activate" %>
+  <% end %>
+</pre>
+
+h2. Step 8
+
+Let's see if things are working...
+
+... (processing) ...
+
+Looks like our user got activated!
+
+But there's a slight problem. Since we didn't update the user's password, we didn't get a magical Authlogic auto-login! How rude.
+
+At this point it's perfectly fine to let the user log themselves in. And you can certainly simplify the activation down to one action so the user doesn't have to click another button. But, I like Authlogic's session maintenance. I also like short signup forms. So let's kill two birds with one stone.
+
+Let's set up the user creation form to only ask for a user's login/email. Then, let's ask the user to set their password/openid upon activation, which will log them in automatically.
+
+First, let's change our acts_as_authentic call to only check for password length on update if the user has no credentials set.
+
+<pre>
+  # modified user.rb
+  # For authlogic 2.0+
+  acts_as_authentic do |c|
+    c.validates_length_of_password_field_options = {:on => :update, :minimum => 4, :if => :has_no_credentials?}
+    c.validates_length_of_password_confirmation_field_options = {:on => :update, :minimum => 4, :if => :has_no_credentials?}
+  end
+
+  # Pre-authlogic 2.0
+  # acts_as_authentic :login_field_validation_options => { :if => :openid_identifier_blank? },
+  #                   :password_field_validation_options => { :if => :openid_identifier_blank? },
+  #                   :password_field_validates_length_of_options => { :on => :update, :if => :has_no_credentials? }
+
+  # ...
+  # we need to make sure that either a password or openid gets set
+  # when the user activates his account
+  def has_no_credentials?
+    self.crypted_password.blank? && self.openid_identifier.blank?
+  end
+
+  # ...
+  # now let's define a couple of methods in the user model. The first
+  # will take care of setting any data that you want to happen at signup
+  # (aka before activation)
+  def signup!(params)
+    self.login = params[:user][:login]
+    self.email = params[:user][:email]
+    save_without_session_maintenance
+  end
+
+  # the second will take care of setting any data that you want to happen
+  # at activation. at the very least this will be setting active to true
+  # and setting a pass, openid, or both.
+  def activate!(params)
+    self.active = true
+    self.password = params[:user][:password]
+    self.password_confirmation = params[:user][:password_confirmation]
+    self.openid_identifier = params[:user][:openid_identifier]
+    save
+  end
+
+  # modified activations_controller.rb
+  def create
+    @user = User.find(params[:id])
+
+    raise Exception if @user.active?
+
+    if @user.activate!(params)
+      @user.deliver_activation_confirmation!
+      flash[:notice] = "Your account has been activated."
+      redirect_to account_url
+    else
+      render :action => :new
+    end
+  end
+
+  # modified users_controller.rb
+  def create
+    @user = User.new
+
+    if @user.signup!(params)
+      @user.deliver_activation_instructions!
+      flash[:notice] = "Your account has been created. Please check your e-mail for your account activation instructions!"
+      redirect_to root_url
+    else
+      render :action => :new
+    end
+  end
+</pre>
+
+h2. Step 10
+
+Now we need to update our views to reflect the new signup process.
+
+<pre>
+  <!-- modified app/views/activations/new.html.erb -->
+  <h1>Activate your account</h1>
+
+  <% form_for @user, :url => activate_path(@user.id), :html => { :method => :post } do |form| %>
+  	<%= form.error_messages %>
+  	<%= render :partial => "form", :locals => { :form => form }%>
+  	<%= form.submit "Activate" %>
+  <% end %>
+
+  <!-- new file app/views/activations/_form.html.erb -->
+  <%= form.label :password, "Set your password" %><br />
+  <%= form.password_field :password %><br />
+  <br />
+  <%= form.label :password_confirmation %><br />
+  <%= form.password_field :password_confirmation %><br />
+  <br />
+  <%= form.label :openid_identifier, "Or use OpenID instead of your email / password" %><br />
+  <%= form.text_field :openid_identifier %><br />
+</pre>
+
+h2. The End
+
+And that's it! Let me know if you have any suggestions for improvement.
